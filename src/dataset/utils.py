@@ -5,6 +5,7 @@ import gzip
 import tarfile
 import zipfile
 import numpy as np
+import torch.nn as nn
 from PIL import Image
 from tqdm import tqdm
 from collections import Counter
@@ -156,7 +157,10 @@ class Compose(object):
 
     def __call__(self, input):
         for t in self.transforms:
-            input['data'] = t(input['data'])
+            if isinstance(t, CustomTransform):
+                input = t(input)
+            else:
+                input['data'] = t(input['data'])
         return input
 
     def __repr__(self):
@@ -166,3 +170,14 @@ class Compose(object):
             format_string += '    {0}'.format(t)
         format_string += '\n)'
         return format_string
+
+
+class CustomTransform(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, input):
+        raise NotImplementedError
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}"

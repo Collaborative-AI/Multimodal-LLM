@@ -1,10 +1,13 @@
 import dataset
 import numpy as np
+import itertools
 import os
 import torch
 from torchvision import transforms
 from torch.utils.data import DataLoader
 from torch.utils.data.dataloader import default_collate
+from transformers import default_data_collator
+from .utils import CustomTransform
 from config import cfg
 
 data_stats = {'MNIST': ((0.1307,), (0.3081,)), 'FashionMNIST': ((0.2860,), (0.3530,)),
@@ -80,16 +83,18 @@ def make_data_collate(collate_mode):
         return input_collate
     elif collate_mode == 'default':
         return default_collate
+    elif collate_mode == 'transformer':
+        return default_data_collator
     else:
         raise ValueError('Not valid collate mode')
 
 
 def make_data_loader(dataset, batch_size, num_steps=None, step=0, step_period=1, pin_memory=True,
-                     num_workers=0, collate_mode='dict', seed=0, shuffle=True):
+                     num_workers=0, collate_mode='dict', seed=0, num_devices=1, shuffle=True):
     data_loader = {}
     for k in dataset:
         if k == 'train' and num_steps is not None:
-            num_samples = batch_size[k] * (num_steps - step) * step_period
+            num_samples = batch_size[k] * num_steps * step_period * num_devices
             if num_samples > 0:
                 generator = torch.Generator()
                 generator.manual_seed(seed)
@@ -99,6 +104,7 @@ def make_data_loader(dataset, batch_size, num_steps=None, step=0, step_period=1,
                                             pin_memory=pin_memory, num_workers=num_workers,
                                             collate_fn=make_data_collate(collate_mode),
                                             worker_init_fn=np.random.seed(seed))
+                data_loader[k] = itertools.islice(data_loader[k], step * step_period, None)
         else:
             if k == 'train':
                 data_loader[k] = DataLoader(dataset=dataset[k], batch_size=batch_size[k], shuffle=shuffle,
@@ -114,6 +120,10 @@ def make_data_loader(dataset, batch_size, num_steps=None, step=0, step_period=1,
 
 
 def process_dataset(dataset):
+    if cfg['model_name'] == 'mllm':
+        for k in dataset:
+            prompt_transform = PromptTransform()
+            dataset[k].transform.transforms.append(prompt_transform)
     processed_dataset = dataset
     cfg['data_size'] = {k: len(processed_dataset[k]) for k in processed_dataset}
     if 'num_epochs' in cfg:
@@ -121,3 +131,11 @@ def process_dataset(dataset):
         cfg['eval_period'] = int(np.ceil(len(processed_dataset['train']) / cfg['batch_size']))
         cfg[cfg['tag']]['optimizer']['num_steps'] = cfg['num_steps']
     return processed_dataset
+
+
+class PromptTransform(CustomTransform):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, input):
+        return input

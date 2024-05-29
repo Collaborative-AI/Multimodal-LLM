@@ -2,13 +2,19 @@ from config import cfg
 
 
 def process_control():
+    print(cfg['control'])
     cfg['data_name'] = cfg['control']['data_name']
-    cfg['model_name'] = cfg['control']['model_name']
+    model_name_list = cfg['control']['model_name'].split('-')
+    cfg['model_name'] = model_name_list[0]
+    if len(model_name_list) > 1:
+        cfg['llm_model_name'] = model_name_list[1]
 
-    cfg['batch_size'] = 250
+    cfg['batch_size'] = 100
     cfg['step_period'] = 1
-    cfg['num_steps'] = 80000
-    cfg['eval_period'] = 200
+    # cfg['num_steps'] = 80000
+    cfg['num_steps'] = 30
+    # cfg['eval_period'] = 200
+    cfg['eval_period'] = 30
     # cfg['num_epochs'] = 400
     cfg['collate_mode'] = 'dict'
 
@@ -26,6 +32,9 @@ def process_control():
     cfg['model']['resnet18'] = {'hidden_size': [64, 128, 256, 512]}
     cfg['model']['wresnet28x2'] = {'depth': 28, 'widen_factor': 2, 'drop_rate': 0.0}
     cfg['model']['wresnet28x8'] = {'depth': 28, 'widen_factor': 8, 'drop_rate': 0.0}
+
+    cfg['model']['mllm'] = {}
+    cfg['max_length'] = 128
 
     tag = cfg['tag']
     cfg[tag] = {}

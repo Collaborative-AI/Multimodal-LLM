@@ -4,6 +4,8 @@ import torch.nn.functional as F
 import torch.optim as optim
 import model
 from transformers import get_linear_schedule_with_warmup
+from peft import get_peft_model, TaskType, LoraConfig, AdaLoraConfig, IA3Config, PromptTuningInit, \
+    PromptTuningConfig, PrefixTuningConfig, PromptEncoderConfig
 
 
 def make_model(cfg):
@@ -111,3 +113,161 @@ def make_scheduler(optimizer, cfg):
     else:
         raise ValueError('Not valid scheduler name')
     return scheduler
+
+
+def make_peft_model(model, task_name, ft_name, cfg=None):
+    if task_name == 'clm':
+        peft_config = make_config_clm(ft_name, cfg)
+    elif task_name == 's2s':
+        peft_config = make_config_s2s(ft_name, cfg)
+    elif task_name == 'sc':
+        peft_config = make_config_sc(ft_name, cfg)
+    elif task_name == 'ic':
+        peft_config = make_config_ic(model, ft_name)
+    else:
+        raise ValueError('Not valid task name')
+    model = get_peft_model(model, peft_config)
+    return model
+
+
+def make_config_clm(ft_name, cfg):
+    if ft_name == 'lora':
+        peft_config = LoraConfig(
+            task_type=TaskType.CAUSAL_LM,
+            r=8,
+            lora_alpha=8,
+            lora_dropout=0.0,
+            inference_mode=False,
+        )
+    elif ft_name == 'adalora':
+        peft_config = AdaLoraConfig(
+            init_r=64,
+            target_r=8,
+            beta1=0.85,
+            beta2=0.85,
+            deltaT=10,
+            lora_alpha=8,
+            lora_dropout=0.0,
+            task_type=TaskType.CAUSAL_LM,
+            inference_mode=False,
+        )
+    elif ft_name == 'ia3':
+        peft_config = IA3Config(task_type=TaskType.CAUSAL_LM, inference_mode=False, feedforward_modules=[])
+    elif ft_name == 'promptune':
+        peft_config = PromptTuningConfig(
+            task_type=TaskType.CAUSAL_LM,
+            prompt_tuning_init=PromptTuningInit.TEXT,
+            num_virtual_tokens=20,
+            prompt_tuning_init_text="Label: ",
+            tokenizer_name_or_path=cfg['tokenizer_name_or_path'],
+        )
+    elif ft_name == 'prefixtune':
+        peft_config = PrefixTuningConfig(task_type=TaskType.CAUSAL_LM, num_virtual_tokens=20)
+    elif ft_name == 'ptune':
+        peft_config = PromptEncoderConfig(task_type=TaskType.CAUSAL_LM, inference_mode=False, num_virtual_tokens=20,
+                                          encoder_hidden_size=128)
+    else:
+        raise ValueError('Not valid ft name')
+    return peft_config
+
+
+def make_config_s2s(ft_name, cfg):
+    if ft_name == 'lora':
+        peft_config = LoraConfig(
+            task_type=TaskType.SEQ_2_SEQ_LM,
+            r=8,
+            lora_alpha=8,
+            lora_dropout=0.0,
+            inference_mode=False,
+        )
+    elif ft_name == 'adalora':
+        peft_config = AdaLoraConfig(
+            init_r=64,
+            target_r=8,
+            beta1=0.85,
+            beta2=0.85,
+            deltaT=10,
+            lora_alpha=8,
+            lora_dropout=0.0,
+            task_type=TaskType.SEQ_2_SEQ_LM,
+            inference_mode=False,
+        )
+    elif ft_name == 'ia3':
+        peft_config = IA3Config(task_type=TaskType.SEQ_2_SEQ_LM, inference_mode=False, feedforward_modules=[])
+    elif ft_name == 'promptune':
+        peft_config = PromptTuningConfig(
+            task_type=TaskType.SEQ_2_SEQ_LM,
+            prompt_tuning_init=PromptTuningInit.TEXT,
+            num_virtual_tokens=20,
+            prompt_tuning_init_text="Label: ",
+            inference_mode=False,
+            tokenizer_name_or_path=cfg['tokenizer_name_or_path'],
+        )
+    elif ft_name == 'prefixtune':
+        peft_config = PrefixTuningConfig(task_type=TaskType.SEQ_2_SEQ_LM, inference_mode=False, num_virtual_tokens=20)
+    elif ft_name == 'ptune':
+        peft_config = PromptEncoderConfig(task_type=TaskType.SEQ_2_SEQ_LM, inference_mode=False, num_virtual_tokens=20,
+                                          encoder_hidden_size=128)
+    else:
+        raise ValueError('Not valid ft name')
+    return peft_config
+
+
+def make_config_sc(ft_name, cfg):
+    if ft_name == 'lora':
+        peft_config = LoraConfig(
+            task_type=TaskType.SEQ_CLS,
+            r=8,
+            lora_alpha=8,
+            lora_dropout=0.0,
+            inference_mode=False,
+        )
+    elif ft_name == 'adalora':
+        peft_config = AdaLoraConfig(
+            init_r=64,
+            target_r=8,
+            beta1=0.85,
+            beta2=0.85,
+            deltaT=10,
+            lora_alpha=8,
+            lora_dropout=0.0,
+            task_type=TaskType.SEQ_CLS,
+            inference_mode=False,
+        )
+    elif ft_name == 'ia3':
+        peft_config = IA3Config(task_type=TaskType.SEQ_CLS, inference_mode=False, feedforward_modules=[])
+    elif ft_name == 'promptune':
+        peft_config = PromptTuningConfig(
+            task_type=TaskType.SEQ_CLS,
+            prompt_tuning_init=PromptTuningInit.TEXT,
+            num_virtual_tokens=20,
+            prompt_tuning_init_text="Label: ",
+            inference_mode=False,
+            tokenizer_name_or_path=cfg['tokenizer_name_or_path'],
+        )
+    elif ft_name == 'prefixtune':
+        peft_config = PrefixTuningConfig(task_type=TaskType.SEQ_CLS, inference_mode=False, num_virtual_tokens=20)
+    elif ft_name == 'ptune':
+        peft_config = PromptEncoderConfig(task_type=TaskType.SEQ_CLS, inference_mode=False, num_virtual_tokens=20,
+                                          encoder_hidden_size=128)
+    else:
+        raise ValueError('Not valid ft name')
+    return peft_config
+
+
+def make_config_ic(model, ft_name):
+    target_modules = []
+    for k, v in model.named_modules():
+        if isinstance(v, (nn.Linear, nn.Conv1d, nn.Conv2d)):
+            target_modules.append(k)
+    if ft_name == 'lora':
+        peft_config = LoraConfig(
+            target_modules=target_modules,
+            r=8,
+            lora_alpha=8,
+            lora_dropout=0.0,
+            inference_mode=False,
+        )
+    else:
+        raise ValueError('Not valid ft name')
+    return peft_config
