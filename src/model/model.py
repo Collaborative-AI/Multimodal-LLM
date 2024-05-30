@@ -115,6 +115,12 @@ def make_scheduler(optimizer, cfg):
     return scheduler
 
 
+def freeze_model(model):
+    for param in model.parameters():
+        param.requires_grad = False
+    return
+
+
 def make_peft_model(model, task_name, ft_name, cfg=None):
     if task_name == 'clm':
         peft_config = make_config_clm(ft_name, cfg)

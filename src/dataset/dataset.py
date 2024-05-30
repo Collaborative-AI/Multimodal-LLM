@@ -119,10 +119,13 @@ def make_data_loader(dataset, batch_size, num_steps=None, step=0, step_period=1,
     return data_loader
 
 
-def process_dataset(dataset):
+def process_dataset(dataset, tokenizer=None):
     if cfg['model_name'] == 'mllm':
+        prompt = (
+            'Dataset Description: The MNIST database contains grayscale images of handwritten digits (0-9) with 60,000 training examples and 10,000 test examples.\n'
+            'Task Description: Classify this image into 0-9 digits.\n')
         for k in dataset:
-            prompt_transform = PromptTransform()
+            prompt_transform = PromptTransform(tokenizer, prompt, cfg['model']['num_prompt_tokens'])
             dataset[k].transform.transforms.append(prompt_transform)
     processed_dataset = dataset
     cfg['data_size'] = {k: len(processed_dataset[k]) for k in processed_dataset}
@@ -134,8 +137,14 @@ def process_dataset(dataset):
 
 
 class PromptTransform(CustomTransform):
-    def __init__(self):
+    def __init__(self, tokenizer, prompt, max_length):
         super().__init__()
+        self.tokenizer = tokenizer
+        if max_length > 0:
+            self.prompt = tokenizer(prompt, max_length=max_length, truncation=True)
+        else:
+            self.prompt = tokenizer(prompt)
 
     def forward(self, input):
+        input = {**input, **self.prompt}
         return input

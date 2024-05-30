@@ -3,10 +3,10 @@ import torch
 import torch.nn as nn
 from config import cfg
 from transformers import AutoModelForCausalLM, AutoModelForSeq2SeqLM, AutoModelForSequenceClassification, \
-    AutoTokenizer, LlamaTokenizer, LlamaForCausalLM
+    AutoTokenizer, LlamaTokenizer, LlamaForCausalLM, LlamaModel
 
 
-def make_hf_model(model_name):
+def make_hf_model(model_name, task_name):
     if 'bart' in model_name:
         cfg['model_name_or_path'] = 'facebook/{}'.format(model_name)
         cfg['tokenizer_name_or_path'] = 'facebook/{}'.format(model_name)
@@ -35,16 +35,16 @@ def make_hf_model(model_name):
         raise ValueError('Not valid model name')
     cfg['cache_model_path'] = os.path.join('output', 'model', model_name)
     cfg['cache_tokenizer_path'] = os.path.join('output', 'tokenizer', model_name)
-    if cfg['task_name'] == 'clm':
+    if task_name == 'clm':
         if 'llama' in model_name:
             # "Training Llama in float16 is not recommended and known to produce nan, as such the model should be trained in bfloat16.""
             model = LlamaForCausalLM.from_pretrained(cfg['model_name_or_path'], torch_dtype=torch.bfloat16,
                                                      device_map=cfg['device'], cache_dir=cfg['cache_model_path'])
         else:
             model = AutoModelForCausalLM.from_pretrained(cfg['model_name_or_path'], cache_dir=cfg['cache_model_path'])
-    elif cfg['task_name'] == 's2s':
+    elif task_name == 's2s':
         model = AutoModelForSeq2SeqLM.from_pretrained(cfg['model_name_or_path'], cache_dir=cfg['cache_model_path'])
-    elif cfg['task_name'] == 'sc':
+    elif task_name == 'sc':
         if cfg['subset_name'] in ['mnli']:
             model = AutoModelForSequenceClassification.from_pretrained(cfg['model_name_or_path'],
                                                                        cache_dir=cfg['cache_model_path'],
@@ -55,6 +55,13 @@ def make_hf_model(model_name):
         else:
             model = AutoModelForSequenceClassification.from_pretrained(cfg['model_name_or_path'],
                                                                        cache_dir=cfg['cache_model_path'])
+    elif task_name == 'none':
+        if 'llama' in model_name:
+            # "Training Llama in float16 is not recommended and known to produce nan, as such the model should be trained in bfloat16.""
+            model = LlamaModel.from_pretrained(cfg['model_name_or_path'], torch_dtype=torch.bfloat16,
+                                                     device_map=cfg['device'], cache_dir=cfg['cache_model_path'])
+        else:
+            model = AutoModelForCausalLM.from_pretrained(cfg['model_name_or_path'], cache_dir=cfg['cache_model_path'])
     else:
         raise ValueError('Not valid task name')
     if any(k in cfg['model_name_or_path'] for k in ("gpt", "opt", "bloom", "llama")):

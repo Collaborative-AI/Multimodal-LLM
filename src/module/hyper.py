@@ -2,14 +2,14 @@ from config import cfg
 
 
 def process_control():
-    print(cfg['control'])
     cfg['data_name'] = cfg['control']['data_name']
     model_name_list = cfg['control']['model_name'].split('-')
     cfg['model_name'] = model_name_list[0]
     if len(model_name_list) > 1:
         cfg['llm_model_name'] = model_name_list[1]
+        cfg['task_name'] = 'clm'
 
-    cfg['batch_size'] = 100
+    cfg['batch_size'] = 1
     cfg['step_period'] = 1
     # cfg['num_steps'] = 80000
     cfg['num_steps'] = 30
@@ -20,6 +20,9 @@ def process_control():
 
     cfg['model'] = {}
     cfg['model']['model_name'] = cfg['model_name']
+    if len(model_name_list) > 1:
+        cfg['model']['llm_model_name'] = cfg['llm_model_name']
+        cfg['model']['task_name'] = cfg['task_name']
     data_shape = {'MNIST': [1, 28, 28], 'FashionMNIST': [1, 28, 28], 'SVHN': [3, 32, 32], 'CIFAR10': [3, 32, 32],
                   'CIFAR100': [3, 32, 32]}
     target_size = {'MNIST': 10, 'FashionMNIST': 10, 'SVHN': 10, 'CIFAR10': 10, 'CIFAR100': 100}
@@ -34,7 +37,8 @@ def process_control():
     cfg['model']['wresnet28x8'] = {'depth': 28, 'widen_factor': 8, 'drop_rate': 0.0}
 
     cfg['model']['mllm'] = {}
-    cfg['max_length'] = 128
+    cfg['model']['num_data_tokens'] = 512
+    cfg['model']['num_prompt_tokens'] = -1
 
     tag = cfg['tag']
     cfg[tag] = {}
