@@ -2,7 +2,8 @@
 # control
 control:
   data_name: MNIST
-  model_name: mllm-gpt2
+  model_name: mllm
+  llm_model_name: gpt2
 # experiment
 pin_memory: True
 num_workers: 0

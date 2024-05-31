@@ -125,7 +125,7 @@ def process_dataset(dataset, tokenizer=None):
             'Dataset Description: The MNIST database contains grayscale images of handwritten digits (0-9) with 60,000 training examples and 10,000 test examples.\n'
             'Task Description: Classify this image into 0-9 digits.\n')
         for k in dataset:
-            prompt_transform = PromptTransform(tokenizer, prompt, cfg['model']['num_prompt_tokens'])
+            prompt_transform = PromptTransform(tokenizer, prompt, cfg['model']['mllm']['num_prompt_tokens'])
             dataset[k].transform.transforms.append(prompt_transform)
     processed_dataset = dataset
     cfg['data_size'] = {k: len(processed_dataset[k]) for k in processed_dataset}

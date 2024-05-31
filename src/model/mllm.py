@@ -6,18 +6,21 @@ from .huggingface import make_hf_model
 
 
 class MLLM(nn.Module):
-    def __init__(self, data_shape, target_size, llm_model_name, task_name, num_data_tokens):
+    def __init__(self, data_shape, target_size, llm_model_name, num_hidden_layers, num_data_tokens):
         super().__init__()
         self.data_shape = data_shape
         self.input_size = math.prod(data_shape)
         self.target_size = target_size
-        self.llm, self.tokenizer = make_hf_model(llm_model_name, task_name)
+        self.llm_model_name = llm_model_name
+        self.num_hidden_layers = num_hidden_layers
+        self.num_data_tokens = num_data_tokens
+        self.llm, self.tokenizer = make_hf_model(llm_model_name, num_hidden_layers)
         freeze_model(self.llm)
+
         self.input_embedding = self.llm.get_input_embeddings()
         self.hidden_size = self.input_embedding.embedding_dim
-        self.num_data_tokens = num_data_tokens
         self.encoder = nn.Conv2d(self.data_shape[0], self.hidden_size, 3, 1, 1)
-        self.linear = nn.Linear(self.input_size, target_size)
+        self.linear = nn.Linear(self.hidden_size, target_size)
 
     def feature(self, x):
         x = x.reshape(x.size(0), -1)
@@ -44,11 +47,8 @@ class MLLM(nn.Module):
         encoded = torch.cat([encoded, prompt_embeddings], dim=1)
 
         decoded = self.llm(inputs_embeds=encoded).last_hidden_state
-        print(decoded.size())
-        exit()
 
-
-        output['target'] = x
+        output['target'] = self.linear(decoded[:, -1])
         output['loss'] = make_loss(output, input)
         return output
 
@@ -57,7 +57,7 @@ def mllm(cfg):
     data_shape = cfg['data_shape']
     target_size = cfg['target_size']
     llm_model_name = cfg['llm_model_name']
-    task_name = cfg['task_name']
-    num_data_tokens = cfg['num_data_tokens']
-    model = MLLM(data_shape, target_size, llm_model_name, task_name, num_data_tokens)
+    num_hidden_layers = cfg['mllm']['num_hidden_layers']
+    num_data_tokens = cfg['mllm']['num_data_tokens']
+    model = MLLM(data_shape, target_size, llm_model_name, num_hidden_layers, num_data_tokens)
     return model
