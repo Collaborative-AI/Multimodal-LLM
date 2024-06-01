@@ -20,6 +20,8 @@ class MLLM(nn.Module):
         self.input_embedding = self.llm.get_input_embeddings()
         self.hidden_size = self.input_embedding.embedding_dim
         self.encoder = nn.Conv2d(self.data_shape[0], self.hidden_size, 3, 1, 1)
+        self.patch_embedding = PatchEmbedding(
+            configs.d_model, self.patch_len, self.stride, configs.dropout)
         self.linear = nn.Linear(self.hidden_size, target_size)
 
     def feature(self, x):
