@@ -30,28 +30,38 @@ class TokenEmbedding(nn.Module):
 
 
 class PatchEmbedding(nn.Module):
-    def __init__(self, d_model, patch_len, stride, dropout):
+    def __init__(self, hidden_size, patch_size, stride, dropout):
         super(PatchEmbedding, self).__init__()
         # Patching
-        self.patch_len = patch_len
+        self.patch_size = patch_size
         self.stride = stride
         self.padding_patch_layer = ReplicationPad1d((0, stride))
 
         # Backbone, Input encoding: projection of feature vectors onto a d-dim vector space
-        self.value_embedding = TokenEmbedding(patch_len, d_model)
+        self.value_embedding = TokenEmbedding(patch_size, hidden_size)
 
         # Positional embedding
-        # self.position_embedding = PositionalEmbedding(d_model)
+        # self.position_embedding = PositionalEmbedding(hidden_size)
 
         # Residual dropout
-        self.dropout = nn.Dropout(dropout)
+        if dropout:
+            self.dropout = nn.Dropout(dropout)
+        else:
+            self.dropout = None
 
     def forward(self, x):
         # do patching
-        n_vars = x.shape[1]
+        # print(x.size())
+        x = x.view(x.size(0), x.size(1), -1)
         x = self.padding_patch_layer(x)
-        x = x.unfold(dimension=-1, size=self.patch_len, step=self.stride)
+        # print(x.size())
+        x = x.unfold(dimension=-1, size=self.patch_size, step=self.stride)
+        # print(x.size())
         x = torch.reshape(x, (x.shape[0] * x.shape[1], x.shape[2], x.shape[3]))
+        # print(x.size())
         # Input encoding
         x = self.value_embedding(x)
-        return self.dropout(x), n_vars
+        # print(x.size())
+        if self.dropout is not None:
+            x = self.dropout(x)
+        return x
